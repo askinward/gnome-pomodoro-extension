@@ -1,0 +1,12 @@
+{
+  "name": "Pomodoro Timer",
+  "description": "A simple Pomodoro timer for GNOME Shell",
+  "uuid": "pomodoro@youcefzaid.github.io",
+  "shell-version": [
+    "45",
+    "46",
+    "47"
+  ],
+  "version": 1,
+  "url": "https://github.com/youcefzaid/gnome-pomodoro"
+}
