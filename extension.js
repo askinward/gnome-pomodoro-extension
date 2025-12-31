@@ -21,6 +21,7 @@ class PomodoroIndicator extends PanelMenu.Button {
         
         // Initialize state
         this._workTimeMinutes = DEFAULT_WORK_TIME;
+        this._activeSessionMinutes = this._workTimeMinutes;
         this._timeLeft = this._workTimeMinutes * 60;
         this._isRunning = false;
         this._pomodoroCount = 0;
@@ -116,6 +117,8 @@ class PomodoroIndicator extends PanelMenu.Button {
     }
     
     _startTimer() {
+        this._activeSessionMinutes = this._workTimeMinutes;
+
         this._isRunning = true;
         this._startStopItem.label.text = 'Pause';
         
@@ -159,8 +162,8 @@ class PomodoroIndicator extends PanelMenu.Button {
         this._pomodoroCount++;
         this._countItem.label.text = `Sessions: ${this._pomodoroCount}`;
         
-        // Reset to work time with custom duration
-        this._timeLeft = this._workTimeMinutes * 60;
+        // Reset to the duration used when the session started
+        this._timeLeft = this._activeSessionMinutes * 60;
         this._label.text = this._formatTime(this._timeLeft);
         this._startStopItem.label.text = 'Start';
         
