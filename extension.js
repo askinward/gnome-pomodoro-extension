@@ -8,20 +8,21 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as Slider from 'resource:///org/gnome/shell/ui/slider.js';
 
-const WORK_TIME = 25 * 60; // 25 minutes in seconds
-const SHORT_BREAK = 5 * 60; // 5 minutes
-const LONG_BREAK = 15 * 60; // 15 minutes
+const DEFAULT_WORK_TIME = 25; // minutes
+const MIN_WORK_TIME = 1; // minimum minutes
+const MAX_WORK_TIME = 60; // maximum minutes
 
 const PomodoroIndicator = GObject.registerClass(
 class PomodoroIndicator extends PanelMenu.Button {
     _init() {
         super._init(0.0, 'Pomodoro Timer');
         
-        // Initialize only primitive state (no objects)
-        this._timeLeft = WORK_TIME;
+        // Initialize state
+        this._workTimeMinutes = DEFAULT_WORK_TIME;
+        this._timeLeft = this._workTimeMinutes * 60;
         this._isRunning = false;
-        this._isWorkTime = true;
         this._pomodoroCount = 0;
         this._timeout = null;
         this._signalIds = [];
@@ -48,15 +49,56 @@ class PomodoroIndicator extends PanelMenu.Button {
         
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         
-        this._statusItem = new PopupMenu.PopupMenuItem('Work Time', {
-            reactive: false
+        // Add slider for work time
+        const sliderItem = new PopupMenu.PopupBaseMenuItem({activate: false});
+        const sliderBox = new St.BoxLayout({
+            vertical: true,
+            style_class: 'popup-menu-item'
         });
-        this.menu.addMenuItem(this._statusItem);
         
-        this._countItem = new PopupMenu.PopupMenuItem('Pomodoros: 0', {
+        this._sliderLabel = new St.Label({
+            text: `Work Time: ${this._workTimeMinutes} min`,
+            style_class: 'popup-menu-item'
+        });
+        sliderBox.add_child(this._sliderLabel);
+        
+        this._slider = new Slider.Slider(this._minutesToSliderValue(this._workTimeMinutes));
+        const sliderId = this._slider.connect('notify::value', () => this._onSliderChanged());
+        this._signalIds.push({obj: this._slider, id: sliderId});
+        sliderBox.add_child(this._slider);
+        
+        sliderItem.add_child(sliderBox);
+        this.menu.addMenuItem(sliderItem);
+        
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        
+        this._countItem = new PopupMenu.PopupMenuItem('Sessions: 0', {
             reactive: false
         });
         this.menu.addMenuItem(this._countItem);
+    }
+    
+    _minutesToSliderValue(minutes) {
+        return (minutes - MIN_WORK_TIME) / (MAX_WORK_TIME - MIN_WORK_TIME);
+    }
+    
+    _sliderValueToMinutes(value) {
+        return Math.round(MIN_WORK_TIME + value * (MAX_WORK_TIME - MIN_WORK_TIME));
+    }
+    
+    _onSliderChanged() {
+        const newMinutes = this._sliderValueToMinutes(this._slider.value);
+        
+        if (newMinutes !== this._workTimeMinutes) {
+            this._workTimeMinutes = newMinutes;
+            this._sliderLabel.text = `Work Time: ${this._workTimeMinutes} min`;
+            
+            // Only update time if not currently running
+            if (!this._isRunning) {
+                this._timeLeft = this._workTimeMinutes * 60;
+                this._label.text = this._formatTime(this._timeLeft);
+            }
+        }
     }
     
     _formatTime(seconds) {
@@ -106,41 +148,24 @@ class PomodoroIndicator extends PanelMenu.Button {
     
     _resetTimer() {
         this._stopTimer();
-        this._isWorkTime = true;
-        this._timeLeft = WORK_TIME;
+        this._timeLeft = this._workTimeMinutes * 60;
         this._label.text = this._formatTime(this._timeLeft);
-        this._statusItem.label.text = 'Work Time';
     }
     
     _onTimerComplete() {
         this._isRunning = false;
         this._timeout = null;
         
-        if (this._isWorkTime) {
-            this._pomodoroCount++;
-            this._countItem.label.text = `Pomodoros: ${this._pomodoroCount}`;
-            
-            // Determine break length
-            if (this._pomodoroCount % 4 === 0) {
-                this._timeLeft = LONG_BREAK;
-                this._statusItem.label.text = 'Long Break';
-            } else {
-                this._timeLeft = SHORT_BREAK;
-                this._statusItem.label.text = 'Short Break';
-            }
-            this._isWorkTime = false;
-        } else {
-            this._timeLeft = WORK_TIME;
-            this._statusItem.label.text = 'Work Time';
-            this._isWorkTime = true;
-        }
+        this._pomodoroCount++;
+        this._countItem.label.text = `Sessions: ${this._pomodoroCount}`;
         
+        // Reset to work time with custom duration
+        this._timeLeft = this._workTimeMinutes * 60;
         this._label.text = this._formatTime(this._timeLeft);
         this._startStopItem.label.text = 'Start';
         
         // Send notification
-        Main.notify('Pomodoro Timer', 
-            this._isWorkTime ? 'Time to work!' : 'Take a break!');
+        Main.notify('Pomodoro Timer', 'Timer complete!');
     }
     
     destroy() {
