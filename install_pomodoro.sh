@@ -1,73 +1,71 @@
 #!/bin/bash
 
-# Pomodoro Extension Installation Script
-# This script installs/updates the Pomodoro GNOME extension
+# =================================================================
+# GNOME Pomodoro Extension Installer
+# This script handles directory creation, file deployment, 
+# and metadata generation for the pomodoro-timer@askinward extension.
+# =================================================================
 
 set -e
 
-EXTENSION_UUID="pomodoro-timer@local"
-EXTENSION_DIR="$HOME/.local/share/gnome-shell/extensions/$EXTENSION_UUID"
+# Configuration
+UUID="pomodoro-timer@askinward"
+EXTENSION_DIR="$HOME/.local/share/gnome-shell/extensions/$UUID"
 
-echo "========================================="
-echo "Pomodoro Timer Extension Installer"
-echo "========================================="
-echo ""
+echo "------------------------------------------"
+echo "🚀 Installing Pomodoro Timer Extension"
+echo "------------------------------------------"
 
-# Check if extension.js exists in current directory
+# 1. Validation
 if [ ! -f "extension.js" ]; then
-    echo "Error: extension.js not found in current directory!"
-    echo "Please make sure extension.js is in the same folder as this script."
+    echo "❌ Error: extension.js not found in the current directory."
+    echo "   Please run this script from inside the repository folder."
     exit 1
 fi
 
-# Create extension directory
-echo "Creating extension directory..."
+# 2. Prepare Directory
+echo "📂 Preparing extension directory..."
+if [ -d "$EXTENSION_DIR" ]; then
+    echo "   (Removing existing version...)"
+    rm -rf "$EXTENSION_DIR"
+fi
 mkdir -p "$EXTENSION_DIR"
 
-# Copy extension.js
-echo "Copying extension.js..."
-cp extension.js "$EXTENSION_DIR/extension.js"
+# 3. Copy Files
+echo "📄 Copying extension.js..."
+cp extension.js "$EXTENSION_DIR/"
 
-# Create metadata.json
-echo "Creating metadata.json..."
-cat > "$EXTENSION_DIR/metadata.json" << 'EOF'
+# 4. Generate Metadata
+# We generate this dynamically to ensure the UUID matches the folder name exactly.
+echo "📝 Generating metadata.json..."
+cat > "$EXTENSION_DIR/metadata.json" << EOF
 {
   "name": "Pomodoro Timer",
-  "description": "A simple Pomodoro timer with custom durations",
-  "uuid": "pomodoro-timer@local",
+  "description": "A minimalist Pomodoro timer with adjustable durations and no forced breaks.",
+  "uuid": "$UUID",
   "shell-version": [
-    "45",
-    "46",
-    "47",
-    "48",
-    "49"
+    "45", "46", "47", "48", "49"
   ],
-  "version": 1
+  "version": 1,
+  "url": "https://github.com/askinward/gnome-pomodoro-extension"
 }
 EOF
 
-echo ""
-echo "Files installed successfully!"
-echo ""
-echo "Extension installed to: $EXTENSION_DIR"
-echo ""
+echo "✅ Files installed to: $EXTENSION_DIR"
 
-# Enable the extension
-echo "Enabling extension..."
-gnome-extensions enable "$EXTENSION_UUID" 2>/dev/null || echo "Note: You may need to restart GNOME Shell first"
+# 5. Activation
+echo "🔧 Attempting to enable extension..."
+# We suppress errors here because it might fail if the shell hasn't been restarted yet
+gnome-extensions enable "$UUID" 2>/dev/null || true
 
 echo ""
-echo "========================================="
-echo "Installation complete!"
-echo "========================================="
+echo "------------------------------------------"
+echo "🎉 Installation Complete!"
+echo "------------------------------------------"
+echo "To finish, you MUST restart GNOME Shell:"
 echo ""
-echo "Next steps:"
-echo "1. Restart GNOME Shell:"
-echo "   - On X11: Press Alt+F2, type 'r', press Enter"
-echo "   - On Wayland: Log out and log back in"
+echo "  • X11: Press Alt+F2, type 'r', and press Enter."
+echo "  • Wayland: Log out and log back in."
 echo ""
-echo "2. The Pomodoro timer should appear in your top panel"
-echo ""
-echo "If it doesn't appear, enable it manually:"
-echo "   gnome-extensions enable pomodoro-timer@local"
-echo ""
+echo "After restarting, the timer will appear in your top panel."
+echo "------------------------------------------"
